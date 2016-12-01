@@ -25,7 +25,7 @@ See b2.mli for OCaml type signatures
 The following code sample prints out the name of each bucket after authenticating
 
     let main =
-        let open B1.V1 in
+        let open B2.V1 in
 
         (* Get a token *)
         authorize_account accountId applicationKey
