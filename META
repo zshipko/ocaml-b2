@@ -1,0 +1,6 @@
+name="B2"
+description="Backblaze B2 API"
+version="0.1"
+requires="num,unix,str,cohttp.lwt,ezjsonm,nocrypto"
+archive(native)="merz.cmxa"
+archive(byte)="merz.cma"
