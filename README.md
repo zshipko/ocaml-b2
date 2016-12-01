@@ -34,6 +34,6 @@ The following code sample prints out the name of each bucket after authenticatin
         >>= Lwt_list.iter (fun bucket ->
                 Lwt_io.printl bucket.bucketName)
 
-    let _ = Lwt.run main
+    let _ = Lwt_main.run main
 
 
