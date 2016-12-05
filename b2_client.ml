@@ -33,6 +33,12 @@ let get_json ?ctx headers url =
 let post_form_json ?ctx ~params headers url =
     post_form ?ctx ~params headers url >|= Ezjsonm.from_string
 
+let find_default fn j name d =
+    try
+        fn j name
+    with _ -> d
+
+
 let find_string j name =
     Ezjsonm.find j name |> Ezjsonm.get_string
 

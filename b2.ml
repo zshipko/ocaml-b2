@@ -5,7 +5,7 @@ open Lwt
 open B2_client
 
 let auth_endpoint = "https://api.backblazeb2.com"
-let endpoint_base = ref "https://api.backblazeb2.com"
+let mk_endpoint base path = base  ^ "/b2api/v1/b2_" ^ path
 
 
 module V1 = struct
@@ -100,7 +100,6 @@ module V1 = struct
     end
 
 
-    let endpoint path = !endpoint_base ^ "/b2api/v1/b2_" ^ path
 
     (* Makes a new header object with the given token *)
     let make_header ?fields:(fields=[]) token =
@@ -113,9 +112,8 @@ module V1 = struct
         let headers = Cohttp.Header.of_list [
             "Authorization", "Basic " ^ encoded
         ] in
-        B2_client.get_json headers (auth_endpoint ^ "/b2api/v1/b2_authorize_account")
-        >|= handle_error (fun j ->
-            let _ = endpoint_base := find_string j ["apiUrl"] in Token.{
+        B2_client.get_json headers (mk_endpoint auth_endpoint  "authorize_account")
+        >|= handle_error (fun j -> Token.{
             accountId = account_id j;
             authorizationToken = find_string j ["authorizationToken"];
             apiUrl= find_string j ["apiUrl"];
@@ -130,7 +128,7 @@ module V1 = struct
         B2_client.post_json ~json:(`O [
             "fileName", `String fileName;
             "fileId", `String fileId;
-        ]) headers (endpoint "delete_file_version")
+        ]) headers (mk_endpoint token.Token.apiUrl "delete_file_version")
         >|= handle_error (fun j -> File_version.{
             fileId = file_id j;
             fileName = file_name j;
@@ -142,7 +140,7 @@ module V1 = struct
             "bucketId", `String bucketId;
             "fileNamePrefix", `String fileNamePrefix;
             "validDurationInSeconds", `String (string_of_int validDurationInSeconds);
-        ]) headers (endpoint "get_download_authorization")
+        ]) headers (mk_endpoint token.Token.apiUrl "get_download_authorization")
         >|= handle_error (fun j -> Download_authorization.{
             bucketId = bucket_id j;
             fileNamePrefix = find_string j ["fileNamePrefix"];
@@ -154,7 +152,7 @@ module V1 = struct
         | Some tok ->
             make_header tok, tok.Token.downloadUrl
         | None -> Cohttp.Header.init (), url in
-        B2_client.get headers (endpoint "download_file_by_id?fileId=" ^ fileId)
+        B2_client.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ fileId))
 
     let download_file_by_name ?token ?auth ?url:(url="") (fileName: string) : string Lwt.t =
         let headers, url = match token with
@@ -175,7 +173,7 @@ module V1 = struct
         bucketId = bucket_id j;
         contentLength = find_int j ["contentLength"];
         contentType = find_string j ["contentType"];
-        fileInfo = Ezjsonm.find j ["fileInfo"];
+        fileInfo = find_default Ezjsonm.find j ["fileInfo"] `Null;
         action = find_string j ["action"];
         uploadTimestamp = find_int j ["uploadTimestamp"];
     }
@@ -186,14 +184,14 @@ module V1 = struct
         accountId = account_id j;
         bucketId = bucket_id j;
         contentType = find_string j ["contentType"];
-        fileInfo = Ezjsonm.find j ["fileInfo"];
+        fileInfo = find_default Ezjsonm.find j ["fileInfo"] `Null;
         uploadTimestamp = find_int j ["uploadTimestamp"];
     }
 
     let get_file_info token fileId =
         B2_client.post_json ~json:(`O [
             "fileId", `String fileId;
-        ]) (make_header token) (endpoint "get_file_info")
+        ]) (make_header token) (mk_endpoint token.Token.apiUrl "get_file_info")
         >|= handle_error find_all_file_info
 
     let hide_file token bucketId fileName =
@@ -201,7 +199,7 @@ module V1 = struct
         B2_client.post_json ~json:(`O [
             "bucketId", `String bucketId;
             "fileName", `String fileName;
-        ]) headers (endpoint "hide_file")
+        ]) headers (mk_endpoint token.Token.apiUrl "hide_file")
         >|= handle_error find_all_file_info
 
     let list_file_names token ?startFileName:(startFileName="")
@@ -218,7 +216,7 @@ module V1 = struct
             | None -> `Null);
         ] @ (if startFileName <> "" then [
             "startFileName", `String startFileName;
-        ] else []))) headers (endpoint "list_file_names")
+        ] else []))) headers (mk_endpoint token.Token.apiUrl "list_file_names")
         >|= handle_error (fun j ->
             Ezjsonm.find j ["files"]
             |> Ezjsonm.get_list find_all_file_info
@@ -240,7 +238,7 @@ module V1 = struct
         ] @ (if startFileName <> "" && startFileId <> "" then [
             "startFileName", `String startFileName;
             "startFileId", `String startFileId
-        ] else []))) headers (endpoint "list_file_versions")
+        ] else []))) headers (mk_endpoint token.Token.apiUrl "list_file_versions")
         >|= handle_error (fun j ->
             Ezjsonm.find j ["files"]
             |> Ezjsonm.get_list find_all_file_info
@@ -276,7 +274,7 @@ module V1 = struct
 
     let cancel_large_file token (fileId : string)  =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O ["fileId", `String fileId]) headers (endpoint "cancel_large_file")
+        B2_client.post_json ~json:(`O ["fileId", `String fileId]) headers (mk_endpoint token.Token.apiUrl "cancel_large_file")
         >|= handle_error (fun j -> File.{
             fileId = file_id j;
             accountId = account_id j;
@@ -290,7 +288,7 @@ module V1 = struct
             "bucketId", `String bucketId;
             "contentType", `String contentType;
             "fileInfo", `O fileInfo;
-        ]) headers (endpoint "start_large_file")
+        ]) headers (mk_endpoint token.Token.apiUrl "start_large_file")
         >|= handle_error find_all_partial_file_info
 
     let finish_large_file token fileId partSha1Array =
@@ -299,7 +297,7 @@ module V1 = struct
             "fileId", `String fileId;
             "partSha1Array", `A (List.map (fun s ->
                 `String (Cstruct.to_string s))partSha1Array );
-        ]) headers (endpoint "finish_large_file")
+        ]) headers (mk_endpoint token.Token.apiUrl "finish_large_file")
         >|= handle_error find_all_file_info
 
     let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : char Lwt_stream.t) partNum =
@@ -325,7 +323,7 @@ module V1 = struct
         B2_client.post_json ~json:(`O [
             "fileId", `String fileId;
             "maxPartCount", `String "1000";
-        ]) headers (endpoint "list_parts")
+        ]) headers (mk_endpoint token.Token.apiUrl "list_parts")
         >|= handle_error (fun j ->
             Ezjsonm.find j ["parts"]
             |> Ezjsonm.get_list (fun j -> Part.{
@@ -356,7 +354,7 @@ module V1 = struct
             "bucketName", `String bucketName;
             "bucketType", `String bucketType;
             "accountId", `String token.Token.accountId;
-        ] @ info)) headers (endpoint "create_bucket")
+        ] @ info)) headers (mk_endpoint token.Token.apiUrl "create_bucket")
         >|= handle_error find_all_bucket
 
     let delete_bucket token (bucketId: string) =
@@ -364,14 +362,14 @@ module V1 = struct
         B2_client.post_json ~json:(`O [
             "bucketId", `String bucketId;
             "accountId", `String token.Token.accountId;
-        ]) headers (endpoint "delete_bucket")
+        ]) headers (mk_endpoint token.Token.apiUrl "delete_bucket")
         >|= handle_error find_all_bucket
 
     let get_upload_url token bucketId =
         let headers = make_header token in
         B2_client.post_json ~json:(`O [
             "bucketId", `String bucketId;
-        ]) headers (endpoint "get_upload_url")
+        ]) headers (mk_endpoint token.Token.apiUrl "get_upload_url")
         >|= handle_error (fun j -> Upload_url.{
             uploadUrl = find_string j ["uploadUrl"];
             authorizationToken = find_string j ["authorizationToken"];
@@ -381,7 +379,7 @@ module V1 = struct
         let headers = make_header token in
         B2_client.post_json ~json:(`O [
             "fileId", `String fileId;
-        ]) headers (endpoint "get_upload_part_url")
+        ]) headers (mk_endpoint token.Token.apiUrl "get_upload_part_url")
         >|= handle_error (fun j -> Upload_url.{
             uploadUrl = find_string j ["uploadUrl"];
             authorizationToken = find_string j ["authorizationToken"];
@@ -391,7 +389,7 @@ module V1 = struct
         let headers = make_header token in
         B2_client.post_json ~json:(`O [
             "accountId", `String token.Token.accountId
-        ]) headers (endpoint "list_buckets")
+        ]) headers (mk_endpoint token.Token.apiUrl "list_buckets")
         >|= handle_error (fun j ->
             Ezjsonm.find j ["buckets"]
             |> Ezjsonm.get_list find_all_bucket)
@@ -406,7 +404,7 @@ module V1 = struct
         let _ = match bucketType with Some p -> (params := ("bucketType", `String p)::!params) | None -> () in
         let _ = match bucketInfo with Some p -> (params := ("bucketInfo", `O p)::!params) | None -> () in
         let _ = match ifRevisionIs with Some p -> (params := ("bucketName", `Float (Int64.to_float p))::!params) | None -> () in
-        B2_client.post_json ~json:(`O !params) headers (endpoint "update_bucket")
+        B2_client.post_json ~json:(`O !params) headers (mk_endpoint token.Token.apiUrl "update_bucket")
         >|= handle_error find_all_bucket
 
 end

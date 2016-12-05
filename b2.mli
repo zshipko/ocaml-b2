@@ -1,4 +1,4 @@
-val endpoint_base : string ref
+val mk_endpoint : string -> string -> string
 
 module V1 : sig
 
