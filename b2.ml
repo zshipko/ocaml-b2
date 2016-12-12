@@ -48,9 +48,7 @@ module V1 = struct
         type t = {
             fileId: string;
             fileName: string;
-            accountId: string;
             contentSha1: Cstruct.t;
-            bucketId: string;
             contentLength: int64;
             contentType: string;
             fileInfo: Ezjsonm.value;
@@ -168,10 +166,8 @@ module V1 = struct
     let find_all_file_info j = File_info.{
         fileId = file_id j;
         fileName = file_name j;
-        accountId = account_id j;
         contentSha1 = find_cstruct j ["contentSha1"];
-        bucketId = bucket_id j;
-        contentLength = find_int j ["contentLength"];
+        contentLength = find_default find_int j ["contentLength"] 0L;
         contentType = find_string j ["contentType"];
         fileInfo = find_default Ezjsonm.find j ["fileInfo"] `Null;
         action = find_string j ["action"];
@@ -220,7 +216,7 @@ module V1 = struct
         >|= handle_error (fun j ->
             Ezjsonm.find j ["files"]
             |> Ezjsonm.get_list find_all_file_info
-            |> fun l -> l, find_string j ["nextFileName"])
+            |> fun l -> l, find_default find_string j ["nextFileName"] "")
 
     let list_file_versions token ?startFileName:(startFileName="")
                                  ?startFileId:(startFileId="")
@@ -242,7 +238,7 @@ module V1 = struct
         >|= handle_error (fun j ->
             Ezjsonm.find j ["files"]
             |> Ezjsonm.get_list find_all_file_info
-            |> fun l -> l, find_string j ["nextFileName"], find_string j ["nextFileId"])
+            |> fun l -> l, find_default find_string j ["nextFileName"] "", find_default find_string j ["nextFileId"] "")
 
     let get_hex = function
         | `Hex s -> s
@@ -253,20 +249,19 @@ module V1 = struct
         let _ = Nocrypto.Hash.SHA1.feed h (Cstruct.of_string s) in
         Nocrypto.Hash.SHA1.get h |> Hex.of_cstruct |> get_hex
 
-    let upload_file (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") ?fileInfo:(fileInfo=[]) (data : char Lwt_stream.t) fileName  =
+    let upload_file (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") ?fileInfo:(fileInfo=[]) (data : string Lwt_stream.t) fileName  =
 
-        Lwt_stream.to_string data
-        >>= fun data ->
-            let headers = ref (Cohttp.Header.of_list Upload_url.[
-                "Authorization", url.authorizationToken;
-                "X-Bz-File-Name", fileName;
-                "Content-Type", contentType;
-                "Content-Length", string_of_int (String.length data);
-                "X-Bz-Content-Sha1", hash_string data;
-            ]) in
-            let _ = List.iteri (fun i (k, v) ->
-                headers := Cohttp.Header.replace !headers ("X-Bz-Info-" ^ k) (Ezjsonm.to_string v)) fileInfo in
-            B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
+        let data = String.concat "" (Lwt_stream.get_available data) in
+        let headers = ref (Cohttp.Header.of_list Upload_url.[
+            "Authorization", url.authorizationToken;
+            "X-Bz-File-Name", fileName;
+            "Content-Type", contentType;
+            "Content-Length", string_of_int (String.length data);
+            "X-Bz-Content-Sha1", hash_string data;
+        ]) in
+        let _ = List.iteri (fun i (k, v) ->
+            headers := Cohttp.Header.replace !headers ("X-Bz-Info-" ^ k) (Ezjsonm.to_string v)) fileInfo in
+        B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
         >|= Ezjsonm.from_string
         >|= handle_error find_all_file_info
 
@@ -300,16 +295,15 @@ module V1 = struct
         ]) headers (mk_endpoint token.Token.apiUrl "finish_large_file")
         >|= handle_error find_all_file_info
 
-    let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : char Lwt_stream.t) partNum =
-        Lwt_stream.to_string data
-        >>= fun data ->
-            let headers = ref (Cohttp.Header.of_list [
-                "Authorization", url.Upload_url.authorizationToken;
-                "X-Bz-Part-Number", string_of_int partNum;
-                "Content-Length", string_of_int (String.length data);
-                "X-Bz-Content-Sha1", hash_string data;
-            ]) in
-            B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
+    let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : string Lwt_stream.t) partNum =
+        let data = String.concat "" (Lwt_stream.get_available data) in
+        let headers = ref (Cohttp.Header.of_list [
+            "Authorization", url.Upload_url.authorizationToken;
+            "X-Bz-Part-Number", string_of_int partNum;
+            "Content-Length", string_of_int (String.length data);
+            "X-Bz-Content-Sha1", hash_string data;
+        ]) in
+        B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
         >|= Ezjsonm.from_string
         >|= handle_error (fun j -> Part.{
             fileId = file_id j;

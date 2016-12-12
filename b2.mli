@@ -40,9 +40,7 @@ module V1 : sig
         type t = {
             fileId: string;
             fileName: string;
-            accountId: string;
             contentSha1: Cstruct.t;
-            bucketId: string;
             contentLength: int64;
             contentType: string;
             fileInfo: Ezjsonm.value;
@@ -102,10 +100,10 @@ module V1 : sig
     val hide_file : Token.t -> string -> string -> File_info.t Lwt.t
     val list_file_names : Token.t -> ?startFileName:string -> ?maxFileCount:int -> ?prefix:string -> ?delimiter:string -> string -> (File_info.t list * string) Lwt.t
     val list_file_versions : Token.t -> ?startFileName:string -> ?startFileId:string -> ?maxFileCount:int -> ?prefix:string -> ?delimiter:string -> string -> (File_info.t list * string * string) Lwt.t
-    val upload_file : Upload_url.t -> ?contentType:string -> ?fileInfo:(string * Ezjsonm.t) list -> char Lwt_stream.t -> string -> File_info.t Lwt.t
+    val upload_file : Upload_url.t -> ?contentType:string -> ?fileInfo:(string * Ezjsonm.t) list -> string Lwt_stream.t -> string -> File_info.t Lwt.t
     val start_large_file : Token.t -> ?contentType:string -> ?fileInfo:(string * Ezjsonm.value) list -> string -> string -> Partial_file_info.t Lwt.t
     val finish_large_file : Token.t -> string -> Cstruct.t list -> File_info.t Lwt.t
-    val upload_part : Upload_url.t -> ?contentType:string -> char Lwt_stream.t -> int -> Part.t Lwt.t
+    val upload_part : Upload_url.t -> ?contentType:string -> string Lwt_stream.t -> int -> Part.t Lwt.t
     val list_parts : Token.t -> string -> Part.t list Lwt.t
     val create_bucket : Token.t -> ?bucketInfo:(string * Ezjsonm.value) list -> string -> string -> Bucket.t Lwt.t
     val delete_bucket : Token.t -> string -> Bucket.t Lwt.t

@@ -84,9 +84,9 @@ exception API_error
 let handle_error x j =
     try
        x j
-    with _ -> raise (try Error_response {
+    with exc -> raise (try Error_response {
         status = find_int j ["status"] |> Int64.to_int;
         code = find_string j ["code"];
         message = find_string j ["message"];
-    } with _ -> API_error)
+    } with _ -> raise exc)
 
