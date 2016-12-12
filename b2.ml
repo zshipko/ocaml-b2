@@ -249,9 +249,10 @@ module V1 = struct
         let _ = Nocrypto.Hash.SHA1.feed h (Cstruct.of_string s) in
         Nocrypto.Hash.SHA1.get h |> Hex.of_cstruct |> get_hex
 
-    let upload_file (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") ?fileInfo:(fileInfo=[]) (data : string Lwt_stream.t) fileName  =
+    let upload_file (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") ?fileInfo:(fileInfo=[]) (data : char Lwt_stream.t) fileName  =
 
-        let data = String.concat "" (Lwt_stream.get_available data) in
+        Lwt_stream.to_string data
+        >>= fun data ->
         let headers = ref (Cohttp.Header.of_list Upload_url.[
             "Authorization", url.authorizationToken;
             "X-Bz-File-Name", fileName;
@@ -295,8 +296,9 @@ module V1 = struct
         ]) headers (mk_endpoint token.Token.apiUrl "finish_large_file")
         >|= handle_error find_all_file_info
 
-    let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : string Lwt_stream.t) partNum =
-        let data = String.concat "" (Lwt_stream.get_available data) in
+    let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : char Lwt_stream.t) partNum =
+        Lwt_stream.to_string data
+        >>= fun data ->
         let headers = ref (Cohttp.Header.of_list [
             "Authorization", url.Upload_url.authorizationToken;
             "X-Bz-Part-Number", string_of_int partNum;
