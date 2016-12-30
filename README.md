@@ -1,6 +1,6 @@
 # ocaml-b2
 
-`ocaml-b2` is a library that provides bindings to Backblaze B2 for OCaml
+`ocaml-b2` is a library that provides bindings to the Backblaze B2 API for OCaml
 
 ## Dependencies
 
