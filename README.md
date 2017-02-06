@@ -11,12 +11,11 @@
 
 ## Installation
 
-    make
-    make install
+    opam pin add b2 .
 
 ## API
 
-All  methods for version 1 of the  B2 API can be found in the module `B2.V1`
+All  methods for version 1 of the B2 API can be found in the module `B2.V1`
 
 See b2.mli for OCaml type signatures
 
