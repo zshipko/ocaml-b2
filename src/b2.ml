@@ -145,20 +145,21 @@ module V1 = struct
             authorizationToken = find_string j ["authorizationToken"];
         })
 
-    let download_file_by_id ?token ?url:(url="") (fileId: string) : string Lwt.t =
+    let download_file_by_id ?token ?url:(url="") ?range:(range="") (fileId: string) : string Lwt.t =
         let headers, url = match token with
         | Some tok ->
-            make_header tok, tok.Token.downloadUrl
+            make_header ~fields:["Range", range] tok, tok.Token.downloadUrl
         | None -> Cohttp.Header.init (), url in
         B2_client.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ fileId))
 
-    let download_file_by_name ?token ?auth ?url:(url="") (fileName: string) : string Lwt.t =
+    let download_file_by_name ?token ?auth ?url:(url="") ?range:(range="") (fileName: string) : string Lwt.t =
         let headers, url = match token with
         | Some tok ->
             make_header tok, tok.Token.downloadUrl
         | None -> (match auth with
         | Some a -> Cohttp.Header.of_list [
-            "Authorization", a.Download_authorization.authorizationToken
+            "Authorization", a.Download_authorization.authorizationToken;
+            "Range", range;
         ]
         | None -> Cohttp.Header.init ()), url in
         B2_client.get headers (Filename.concat url fileName)

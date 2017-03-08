@@ -94,8 +94,8 @@ module V1 : sig
     val cancel_large_file : Token.t -> string -> File.t Lwt.t
     val delete_file_version : Token.t -> string -> string -> File_version.t Lwt.t
     val get_download_authorization : Token.t -> string -> string -> int -> Download_authorization.t Lwt.t
-    val download_file_by_id : ?token:Token.t-> ?url:string -> string -> string Lwt.t
-    val download_file_by_name : ?token:Token.t -> ?auth:Download_authorization.t -> ?url:string -> string -> string Lwt.t
+    val download_file_by_id : ?token:Token.t-> ?url:string -> ?range:string -> string -> string Lwt.t
+    val download_file_by_name : ?token:Token.t -> ?auth:Download_authorization.t -> ?url:string -> ?range:string -> string -> string Lwt.t
     val get_file_info : Token.t -> string -> File_info.t Lwt.t
     val hide_file : Token.t -> string -> string -> File_info.t Lwt.t
     val list_file_names : Token.t -> ?startFileName:string -> ?maxFileCount:int -> ?prefix:string -> ?delimiter:string -> string -> (File_info.t list * string) Lwt.t
