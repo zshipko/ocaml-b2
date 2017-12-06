@@ -4,20 +4,20 @@ open Cohttp_lwt_unix
 
 let get ?ctx headers url =
     Client.get ?ctx ~headers (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt_body.to_string body
+        Cohttp_lwt.Body.to_string body
 
 let post ?ctx ?body:(body=`Empty) headers url =
-    Cohttp_lwt_body.length body
+    Cohttp_lwt.Body.length body
     >>= fun (len, body) ->
         let headers = Cohttp.Header.replace headers "Content-Length" (Int64.to_string len) in
         Client.post ?ctx ~headers ~body (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt_body.to_string body
+        Cohttp_lwt.Body.to_string body
 
 let post_form ?ctx ?params:(params=[]) headers url =
     let len = Uri.encoded_of_query params |> String.length in
     let headers = Cohttp.Header.replace headers "Content-Length" (string_of_int len) in
     Client.post_form ?ctx ~headers ~params (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt_body.to_string body
+        Cohttp_lwt.Body.to_string body
 
 let post_json ?ctx ?json headers url =
     let body, len = match json with
