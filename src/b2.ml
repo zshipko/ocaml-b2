@@ -8,7 +8,9 @@ let auth_endpoint = "https://api.backblazeb2.com"
 let mk_endpoint base path = base  ^ "/b2api/v1/b2_" ^ path
 
 
-module V1 = struct
+module V1(C: Cohttp_lwt.S.Client) = struct
+
+    module IO = B2_client.IO(C)
 
     module Token = struct
         type t = {
@@ -124,7 +126,7 @@ module V1 = struct
         let headers = Cohttp.Header.of_list [
             "Authorization", "Basic " ^ encoded
         ] in
-        B2_client.get_json headers (mk_endpoint auth_endpoint  "authorize_account")
+        IO.get_json headers (mk_endpoint auth_endpoint  "authorize_account")
         >|= handle_error (fun j -> Token.{
             accountId = account_id j;
             authorizationToken = find_string j ["authorizationToken"];
@@ -137,7 +139,7 @@ module V1 = struct
 
     let delete_file_version token (fileName : string) (fileId : string) =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "fileName", `String fileName;
             "fileId", `String fileId;
         ]) headers (mk_endpoint token.Token.apiUrl "delete_file_version")
@@ -148,7 +150,7 @@ module V1 = struct
 
     let get_download_authorization token bucketId fileNamePrefix validDurationInSeconds =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "bucketId", `String bucketId;
             "fileNamePrefix", `String fileNamePrefix;
             "validDurationInSeconds", `String (string_of_int validDurationInSeconds);
@@ -164,7 +166,7 @@ module V1 = struct
         | Some tok ->
             make_header ~fields:["Range", range] tok, tok.Token.downloadUrl
         | None -> Cohttp.Header.init (), url in
-        B2_client.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ fileId))
+        IO.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ fileId))
 
     let download_file_by_name ?token ?auth ?url:(url="") ?range:(range="") (fileName: string) : string Lwt.t =
         let headers, url = match token with
@@ -176,7 +178,7 @@ module V1 = struct
             "Range", range;
         ]
         | None -> Cohttp.Header.init ()), url in
-        B2_client.get headers (Filename.concat url fileName)
+        IO.get headers (Filename.concat url fileName)
 
     let find_all_file_info j = File_info.{
         fileId = file_id j;
@@ -200,14 +202,14 @@ module V1 = struct
     }
 
     let get_file_info token fileId =
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "fileId", `String fileId;
         ]) (make_header token) (mk_endpoint token.Token.apiUrl "get_file_info")
         >|= handle_error find_all_file_info
 
     let hide_file token bucketId fileName =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "bucketId", `String bucketId;
             "fileName", `String fileName;
         ]) headers (mk_endpoint token.Token.apiUrl "hide_file")
@@ -218,7 +220,7 @@ module V1 = struct
                               ?prefix:(prefix="")
                               ?delimiter bucketId =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O ([
+        IO.post_json ~json:(`O ([
             "bucketId", `String bucketId;
             "maxFileCount", `Float (float_of_int maxFileCount);
             "prefix", `String prefix;
@@ -239,7 +241,7 @@ module V1 = struct
                                  ?prefix:(prefix="")
                                  ?delimiter bucketId =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O ([
+        IO.post_json ~json:(`O ([
             "bucketId", `String bucketId;
             "maxFileCount", `Float (float_of_int maxFileCount);
             "prefix", `String prefix;
@@ -277,7 +279,7 @@ module V1 = struct
         ]) in
         let _ = List.iteri (fun i (k, v) ->
             headers := Cohttp.Header.replace !headers ("X-Bz-Info-" ^ k) (Ezjsonm.to_string v)) fileInfo in
-        B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
+        IO.post ~body:(`String data) !headers url.Upload_url.uploadUrl
         >|= Ezjsonm.from_string
         >|= handle_error find_all_file_info
 
@@ -285,7 +287,7 @@ module V1 = struct
 
     let cancel_large_file token (fileId : string)  =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O ["fileId", `String fileId]) headers (mk_endpoint token.Token.apiUrl "cancel_large_file")
+        IO.post_json ~json:(`O ["fileId", `String fileId]) headers (mk_endpoint token.Token.apiUrl "cancel_large_file")
         >|= handle_error (fun j -> File.{
             fileId = file_id j;
             accountId = account_id j;
@@ -295,7 +297,7 @@ module V1 = struct
 
     let start_large_file token ?contentType:(contentType="b2/x-auto") ?fileInfo:(fileInfo=[]) bucketId fileName =
         let headers = make_header token in
-        B2_client.post_json  ~json:(`O [
+        IO.post_json  ~json:(`O [
             "bucketId", `String bucketId;
             "contentType", `String contentType;
             "fileInfo", `O fileInfo;
@@ -304,7 +306,7 @@ module V1 = struct
 
     let finish_large_file token fileId partSha1Array =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "fileId", `String fileId;
             "partSha1Array", `A (List.map (fun s ->
                 `String (Cstruct.to_string s))partSha1Array );
@@ -320,7 +322,7 @@ module V1 = struct
             "Content-Length", string_of_int (String.length data);
             "X-Bz-Content-Sha1", hash_string data;
         ]) in
-        B2_client.post ~body:(`String data) !headers url.Upload_url.uploadUrl
+        IO.post ~body:(`String data) !headers url.Upload_url.uploadUrl
         >|= Ezjsonm.from_string
         >|= handle_error (fun j -> Part.{
             fileId = file_id j;
@@ -331,7 +333,7 @@ module V1 = struct
 
     let list_parts token fileId =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "fileId", `String fileId;
             "maxPartCount", `String "1000";
         ]) headers (mk_endpoint token.Token.apiUrl "list_parts")
@@ -361,7 +363,7 @@ module V1 = struct
         let info = match bucketInfo with
             | Some jv -> ["bucketInfo", `O jv]
             | None -> []  in
-        B2_client.post_json ~json:(`O ([
+        IO.post_json ~json:(`O ([
             "bucketName", `String bucketName;
             "bucketType", `String (string_of_bucket_type bucketType);
             "accountId", `String token.Token.accountId;
@@ -370,7 +372,7 @@ module V1 = struct
 
     let delete_bucket token (bucketId: string) =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "bucketId", `String bucketId;
             "accountId", `String token.Token.accountId;
         ]) headers (mk_endpoint token.Token.apiUrl "delete_bucket")
@@ -378,7 +380,7 @@ module V1 = struct
 
     let get_upload_url token bucketId =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "bucketId", `String bucketId;
         ]) headers (mk_endpoint token.Token.apiUrl "get_upload_url")
         >|= handle_error (fun j -> Upload_url.{
@@ -388,7 +390,7 @@ module V1 = struct
 
     let get_upload_part_url token fileId =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "fileId", `String fileId;
         ]) headers (mk_endpoint token.Token.apiUrl "get_upload_part_url")
         >|= handle_error (fun j -> Upload_url.{
@@ -398,7 +400,7 @@ module V1 = struct
 
     let list_buckets token =
         let headers = make_header token in
-        B2_client.post_json ~json:(`O [
+        IO.post_json ~json:(`O [
             "accountId", `String token.Token.accountId
         ]) headers (mk_endpoint token.Token.apiUrl "list_buckets")
         >|= handle_error (fun j ->
@@ -415,7 +417,7 @@ module V1 = struct
         let _ = match bucketType with Some p -> (params := ("bucketType", `String (string_of_bucket_type p))::!params) | None -> () in
         let _ = match bucketInfo with Some p -> (params := ("bucketInfo", `O p)::!params) | None -> () in
         let _ = match ifRevisionIs with Some p -> (params := ("bucketName", `Float (Int64.to_float p))::!params) | None -> () in
-        B2_client.post_json ~json:(`O !params) headers (mk_endpoint token.Token.apiUrl "update_bucket")
+        IO.post_json ~json:(`O !params) headers (mk_endpoint token.Token.apiUrl "update_bucket")
         >|= handle_error find_all_bucket
 
 end

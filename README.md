@@ -4,8 +4,7 @@
 
 ## Dependencies
 
-    - lwt
-    - cohttp
+    - cohttp-lwt
     - ezjsonm
     - nocrypto
 
@@ -23,16 +22,19 @@ See b2.mli for OCaml type signatures
 
 The following code sample prints out the name of each bucket after authenticating
 
-    let main =
-        let open B2.V1 in
+```ocaml
+    module API = B2.V1(Cohttp_lwt_unix.Client)
 
+    let main =
         (* Get a token *)
-        authorize_account accountId applicationKey
-        >>= fun token ->
-           list_buckets token
+        API.authorize_account accountId applicationKey
+
+        (* List bucket *)
+        >>= fun token -> API.list_buckets token
         >>= Lwt_list.iter (fun bucket ->
-                Lwt_io.printl bucket.bucketName)
+            Lwt_io.printl bucket.bucketName)
 
     let _ = Lwt_main.run main
+```
 
 

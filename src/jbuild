@@ -3,4 +3,4 @@
 (library
     ((name b2)
      (public_name b2)
-     (libraries (cohttp-lwt-unix nocrypto ezjsonm))))
+     (libraries (cohttp-lwt nocrypto ezjsonm))))

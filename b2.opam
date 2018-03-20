@@ -10,7 +10,7 @@ doc: "https://github.com/zshipko/ocaml-b2"
 
 depends: [
     "jbuilder" {build}
-    "cohttp-lwt-unix" {>= "1.0"}
+    "cohttp-lwt" {>= "1.0"}
     "ezjsonm" {>= "0.5"}
     "nocrypto" {>= "0.5"}
 ]

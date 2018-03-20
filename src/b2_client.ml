@@ -1,37 +1,39 @@
 open Lwt
 open Cohttp
-open Cohttp_lwt_unix
+open Cohttp_lwt
 
-let get ?ctx headers url =
-    Client.get ?ctx ~headers (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt.Body.to_string body
+module IO(C: Cohttp_lwt.S.Client) = struct
+    let get ?ctx headers url =
+        C.get ?ctx ~headers (Uri.of_string url) >>= fun (res, body) ->
+            Cohttp_lwt.Body.to_string body
 
-let post ?ctx ?body:(body=`Empty) headers url =
-    Cohttp_lwt.Body.length body
-    >>= fun (len, body) ->
-        let headers = Cohttp.Header.replace headers "Content-Length" (Int64.to_string len) in
-        Client.post ?ctx ~headers ~body (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt.Body.to_string body
+    let post ?ctx ?body:(body=`Empty) headers url =
+        Cohttp_lwt.Body.length body
+        >>= fun (len, body) ->
+            let headers = Cohttp.Header.replace headers "Content-Length" (Int64.to_string len) in
+            C.post ?ctx ~headers ~body (Uri.of_string url) >>= fun (res, body) ->
+            Cohttp_lwt.Body.to_string body
 
-let post_form ?ctx ?params:(params=[]) headers url =
-    let len = Uri.encoded_of_query params |> String.length in
-    let headers = Cohttp.Header.replace headers "Content-Length" (string_of_int len) in
-    Client.post_form ?ctx ~headers ~params (Uri.of_string url) >>= fun (res, body) ->
-        Cohttp_lwt.Body.to_string body
+    let post_form ?ctx ?params:(params=[]) headers url =
+        let len = Uri.encoded_of_query params |> String.length in
+        let headers = Cohttp.Header.replace headers "Content-Length" (string_of_int len) in
+        C.post_form ?ctx ~headers ~params (Uri.of_string url) >>= fun (res, body) ->
+            Cohttp_lwt.Body.to_string body
 
-let post_json ?ctx ?json headers url =
-    let body, len = match json with
-    | Some j ->
-        let s = Ezjsonm.to_string j in
-        `String s, String.length s
-    | None -> `Empty, 0 in
-    post ?ctx ~body headers url >|= Ezjsonm.from_string
+    let post_json ?ctx ?json headers url =
+        let body, len = match json with
+        | Some j ->
+            let s = Ezjsonm.to_string j in
+            `String s, String.length s
+        | None -> `Empty, 0 in
+        post ?ctx ~body headers url >|= Ezjsonm.from_string
 
-let get_json ?ctx headers url =
-    get ?ctx headers url >|= Ezjsonm.from_string
+    let get_json ?ctx headers url =
+        get ?ctx headers url >|= Ezjsonm.from_string
 
-let post_form_json ?ctx ~params headers url =
-    post_form ?ctx ~params headers url >|= Ezjsonm.from_string
+    let post_form_json ?ctx ~params headers url =
+        post_form ?ctx ~params headers url >|= Ezjsonm.from_string
+end
 
 let find_default fn j name d =
     try

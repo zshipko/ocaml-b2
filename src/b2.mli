@@ -1,6 +1,6 @@
 val mk_endpoint : string -> string -> string
 
-module V1 : sig
+module V1 (C: Cohttp_lwt.S.Client) : sig
 
     module Token : sig
         type t = {
