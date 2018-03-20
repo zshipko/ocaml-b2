@@ -1,3 +1,0 @@
-true: bin_annot, package(cohttp.lwt ezjsonm nocrypto)
-
-<lib> : include
