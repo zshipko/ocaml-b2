@@ -77,18 +77,22 @@ module V1 : sig
         }
     end
 
+    type bucket_type = [
+        | `Public
+        | `Private
+    ]
+
     module Bucket : sig
         (* NOTE: lifecycleRules is not yet implemented *)
         type t = {
             accountId: string;
             bucketId: string;
             bucketName: string;
-            bucketType: string;
+            bucketType: bucket_type;
             bucketInfo: Ezjsonm.value;
             revision: Int64.t;
         }
     end
-
 
     val authorize_account : string -> string -> Token.t Lwt.t
     val cancel_large_file : Token.t -> string -> File.t Lwt.t
@@ -105,10 +109,10 @@ module V1 : sig
     val finish_large_file : Token.t -> string -> Cstruct.t list -> File_info.t Lwt.t
     val upload_part : Upload_url.t -> ?contentType:string -> char Lwt_stream.t -> int -> Part.t Lwt.t
     val list_parts : Token.t -> string -> Part.t list Lwt.t
-    val create_bucket : Token.t -> ?bucketInfo:(string * Ezjsonm.value) list -> string -> string -> Bucket.t Lwt.t
+    val create_bucket : Token.t -> ?bucketInfo:(string * Ezjsonm.value) list -> string -> bucket_type -> Bucket.t Lwt.t
     val delete_bucket : Token.t -> string -> Bucket.t Lwt.t
     val get_upload_url : Token.t -> string -> Upload_url.t Lwt.t
     val get_upload_part_url : Token.t -> string -> Upload_url.t Lwt.t
     val list_buckets : Token.t -> Bucket.t list Lwt.t
-    val update_bucket : Token.t -> ?bucketType:string -> ?bucketInfo:(string * Ezjsonm.value) list -> ?ifRevisionIs:Int64.t -> string -> string -> Bucket.t Lwt.t
+    val update_bucket : Token.t -> ?bucketType:bucket_type -> ?bucketInfo:(string * Ezjsonm.value) list -> ?ifRevisionIs:Int64.t -> string -> string -> Bucket.t Lwt.t
 end

@@ -85,13 +85,27 @@ module V1 = struct
         }
     end
 
+    type bucket_type = [
+        | `Public
+        | `Private
+    ]
+
+    let string_of_bucket_type = function
+        | `Public -> "allPublic"
+        | `Private -> "allPrivate"
+
+    (* Defaults to private when the string is invalid *)
+    let bucket_type_of_string = function
+        | "allPublic" -> `Public
+        | _ -> `Private
+
     module Bucket = struct
         (* NOTE: lifecycleRules is not yet implemented *)
         type t = {
             accountId: string;
             bucketId: string;
             bucketName: string;
-            bucketType: string;
+            bucketType: bucket_type;
             bucketInfo: Ezjsonm.value;
             revision: Int64.t;
         }
@@ -105,7 +119,7 @@ module V1 = struct
             "Authorization", token.Token.authorizationToken
         ] @ fields)
 
-    let authorize_account (accountId: string) (applicationKey : string) =
+    let authorize_account (accountId: string) (applicationKey: string) =
         let encoded = Nocrypto.Base64.encode (Cstruct.of_string (accountId ^ ":" ^ applicationKey)) |> Cstruct.to_string in
         let headers = Cohttp.Header.of_list [
             "Authorization", "Basic " ^ encoded
@@ -337,19 +351,19 @@ module V1 = struct
         accountId = account_id j;
         bucketId = bucket_id j;
         bucketName = bucket_name j;
-        bucketType = bucket_type j;
+        bucketType = bucket_type j |> bucket_type_of_string;
         bucketInfo = bucket_info j;
         revision = revision j;
     }
 
-    let create_bucket token ?bucketInfo (bucketName: string) (bucketType: string) =
+    let create_bucket token ?bucketInfo (bucketName: string) (bucketType: bucket_type) =
         let headers = make_header token in
         let info = match bucketInfo with
             | Some jv -> ["bucketInfo", `O jv]
             | None -> []  in
         B2_client.post_json ~json:(`O ([
             "bucketName", `String bucketName;
-            "bucketType", `String bucketType;
+            "bucketType", `String (string_of_bucket_type bucketType);
             "accountId", `String token.Token.accountId;
         ] @ info)) headers (mk_endpoint token.Token.apiUrl "create_bucket")
         >|= handle_error find_all_bucket
@@ -398,7 +412,7 @@ module V1 = struct
             "bucketId", `String bucketId;
             "bucketName", `String bucketName;
         ] in
-        let _ = match bucketType with Some p -> (params := ("bucketType", `String p)::!params) | None -> () in
+        let _ = match bucketType with Some p -> (params := ("bucketType", `String (string_of_bucket_type p))::!params) | None -> () in
         let _ = match bucketInfo with Some p -> (params := ("bucketInfo", `O p)::!params) | None -> () in
         let _ = match ifRevisionIs with Some p -> (params := ("bucketName", `Float (Int64.to_float p))::!params) | None -> () in
         B2_client.post_json ~json:(`O !params) headers (mk_endpoint token.Token.apiUrl "update_bucket")
