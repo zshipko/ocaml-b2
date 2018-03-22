@@ -10,7 +10,7 @@
 
 ## Installation
 
-    opam pin add b2 .
+    opam pin add b2 https://github.com/zshipko/ocaml-b2.git
 
 ## API
 
