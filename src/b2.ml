@@ -277,7 +277,7 @@ module V1(C: Cohttp_lwt.S.Client) = struct
             "Content-Length", string_of_int (String.length data);
             "X-Bz-Content-Sha1", hash_string data;
         ]) in
-        let _ = List.iteri (fun i (k, v) ->
+        let _ = List.iter (fun (k, v) ->
             headers := Cohttp.Header.replace !headers ("X-Bz-Info-" ^ k) (Ezjsonm.to_string v)) fileInfo in
         IO.post ~body:(`String data) !headers url.Upload_url.uploadUrl
         >|= Ezjsonm.from_string
@@ -301,6 +301,7 @@ module V1(C: Cohttp_lwt.S.Client) = struct
             "bucketId", `String bucketId;
             "contentType", `String contentType;
             "fileInfo", `O fileInfo;
+            "fileName", `String fileName;
         ]) headers (mk_endpoint token.Token.apiUrl "start_large_file")
         >|= handle_error find_all_partial_file_info
 
@@ -313,7 +314,7 @@ module V1(C: Cohttp_lwt.S.Client) = struct
         ]) headers (mk_endpoint token.Token.apiUrl "finish_large_file")
         >|= handle_error find_all_file_info
 
-    let upload_part (url : Upload_url.t) ?contentType:(contentType="b2/x-auto") (data : char Lwt_stream.t) partNum =
+    let upload_part (url : Upload_url.t)  (data : char Lwt_stream.t) partNum =
         Lwt_stream.to_string data
         >>= fun data ->
         let headers = ref (Cohttp.Header.of_list [

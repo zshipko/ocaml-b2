@@ -107,7 +107,7 @@ module V1 (C: Cohttp_lwt.S.Client) : sig
     val upload_file : Upload_url.t -> ?contentType:string -> ?fileInfo:(string * Ezjsonm.t) list -> char Lwt_stream.t -> string -> File_info.t Lwt.t
     val start_large_file : Token.t -> ?contentType:string -> ?fileInfo:(string * Ezjsonm.value) list -> string -> string -> Partial_file_info.t Lwt.t
     val finish_large_file : Token.t -> string -> Cstruct.t list -> File_info.t Lwt.t
-    val upload_part : Upload_url.t -> ?contentType:string -> char Lwt_stream.t -> int -> Part.t Lwt.t
+    val upload_part : Upload_url.t -> char Lwt_stream.t -> int -> Part.t Lwt.t
     val list_parts : Token.t -> string -> Part.t list Lwt.t
     val create_bucket : Token.t -> ?bucketInfo:(string * Ezjsonm.value) list -> string -> bucket_type -> Bucket.t Lwt.t
     val delete_bucket : Token.t -> string -> Bucket.t Lwt.t

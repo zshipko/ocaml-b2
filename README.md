@@ -23,18 +23,18 @@ See b2.mli for OCaml type signatures
 The following code sample prints out the name of each bucket after authenticating
 
 ```ocaml
-    module API = B2.V1(Cohttp_lwt_unix.Client)
+module API = B2.V1(Cohttp_lwt_unix.Client)
 
-    let main =
-        (* Get a token *)
-        API.authorize_account accountId applicationKey
+let main =
+    (* Get a token *)
+    API.authorize_account accountId applicationKey
 
-        (* List bucket *)
-        >>= fun token -> API.list_buckets token
-        >>= Lwt_list.iter (fun bucket ->
-            Lwt_io.printl bucket.bucketName)
+    (* List bucket *)
+    >>= fun token -> API.list_buckets token
+    >>= Lwt_list.iter (fun bucket ->
+        Lwt_io.printl bucket.bucketName)
 
-    let _ = Lwt_main.run main
+let _ = Lwt_main.run main
 ```
 
 
