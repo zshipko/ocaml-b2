@@ -5,7 +5,7 @@ license: "MIT"
 homepage: "https://github.com/zshipko/ocaml-b2"
 bug-reports: "https://github.com/zshipko/ocaml-b2/issues"
 dev-repo: "https://github.com/zshipko/ocaml-b2.git"
-doc: "https://github.com/zshipko/ocaml-b2"
+doc: "https://zshipko.github.io/ocaml-b2/doc"
 
 depends: [
     "jbuilder" {build}
