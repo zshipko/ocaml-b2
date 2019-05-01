@@ -1,38 +1,3 @@
-module IO (C : Cohttp_lwt.S.Client) : sig
-  val get : ?ctx:C.ctx -> Cohttp.Header.t -> string -> string Lwt.t
-
-  val post :
-    ?ctx:C.ctx ->
-    ?body:Cohttp_lwt.Body.t ->
-    Cohttp.Header.t ->
-    string ->
-    string Lwt.t
-
-  val post_form :
-    ?ctx:C.ctx ->
-    ?params:(string * string list) list ->
-    Cohttp.Header.t ->
-    string ->
-    string Lwt.t
-
-  val post_json :
-    ?ctx:C.ctx ->
-    ?json:Ezjsonm.t ->
-    Cohttp.Header.t ->
-    string ->
-    [> Ezjsonm.t ] Lwt.t
-
-  val get_json :
-    ?ctx:C.ctx -> Cohttp.Header.t -> string -> [> Ezjsonm.t ] Lwt.t
-
-  val post_form_json :
-    ?ctx:C.ctx ->
-    params:(string * string list) list ->
-    Cohttp.Header.t ->
-    string ->
-    [> Ezjsonm.t ] Lwt.t
-end
-
 type error = { status : int; code : string; message : string }
 
 exception Error_response of error
@@ -40,41 +5,6 @@ exception Error_response of error
 exception API_error
 
 module V1 (C : Cohttp_lwt.S.Client) : sig
-  module IO : sig
-    val get : ?ctx:C.ctx -> Cohttp.Header.t -> string -> string Lwt.t
-
-    val post :
-      ?ctx:C.ctx ->
-      ?body:Cohttp_lwt.Body.t ->
-      Cohttp.Header.t ->
-      string ->
-      string Lwt.t
-
-    val post_form :
-      ?ctx:C.ctx ->
-      ?params:(string * string list) list ->
-      Cohttp.Header.t ->
-      string ->
-      string Lwt.t
-
-    val post_json :
-      ?ctx:C.ctx ->
-      ?json:Ezjsonm.t ->
-      Cohttp.Header.t ->
-      string ->
-      [> Ezjsonm.t ] Lwt.t
-
-    val get_json :
-      ?ctx:C.ctx -> Cohttp.Header.t -> string -> [> Ezjsonm.t ] Lwt.t
-
-    val post_form_json :
-      ?ctx:C.ctx ->
-      params:(string * string list) list ->
-      Cohttp.Header.t ->
-      string ->
-      [> Ezjsonm.t ] Lwt.t
-  end
-
   module Token : sig
     type t = {
       account_id : string;
@@ -161,9 +91,6 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     }
   end
 
-  val make_header :
-    ?fields:(string * string) list -> Token.t -> Cohttp.Header.t
-
   val authorize_account :
     account_id:string -> application_key:string -> Token.t Lwt.t
 
@@ -174,7 +101,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     token:Token.t ->
     bucket_id:string ->
     file_name_prefix:string ->
-    int ->
+    valid_duration_in_seconds:int ->
     Download_authorization.t Lwt.t
 
   val download_file_by_id :
@@ -182,6 +109,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?url:string ->
     ?range:string ->
     file_id:string ->
+    unit ->
     string Lwt.t
 
   val download_file_by_name :
@@ -190,6 +118,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?url:string ->
     ?range:string ->
     file_name:string ->
+    unit ->
     string Lwt.t
 
   val get_file_info : token:Token.t -> file_id:string -> File_info.t Lwt.t
@@ -204,6 +133,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?prefix:string ->
     ?delimiter:string ->
     bucket_id:string ->
+    unit ->
     (File_info.t list * string) Lwt.t
 
   val list_file_versions :
@@ -214,6 +144,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?prefix:string ->
     ?delimiter:string ->
     bucket_id:string ->
+    unit ->
     (File_info.t list * string * string) Lwt.t
 
   val hash_string : String.t -> string
@@ -224,6 +155,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?file_info:(string * Ezjsonm.t) list ->
     data:char Lwt_stream.t ->
     file_name:string ->
+    unit ->
     File_info.t Lwt.t
 
   val cancel_large_file : token:Token.t -> file_id:string -> File.t Lwt.t
@@ -234,6 +166,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?file_info:(string * Ezjsonm.value) list ->
     bucket_id:string ->
     file_name:string ->
+    unit ->
     Partial_file_info.t Lwt.t
 
   val finish_large_file :
@@ -252,6 +185,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?bucket_info:(string * Ezjsonm.value) list ->
     bucket_name:string ->
     bucket_type:[< `Private | `Public ] ->
+    unit ->
     Bucket.t Lwt.t
 
   val delete_bucket : token:Token.t -> bucket_id:string -> Bucket.t Lwt.t
@@ -270,5 +204,6 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     ?if_revision_is:int64 ->
     bucket_id:string ->
     bucket_name:string ->
+    unit ->
     Bucket.t Lwt.t
 end

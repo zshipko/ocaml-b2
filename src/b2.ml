@@ -212,7 +212,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     >|= handle_error (fun _j -> File_version.{ file_id; file_name })
 
   let get_download_authorization ~token ~bucket_id ~file_name_prefix
-      valid_duration_in_seconds =
+      ~valid_duration_in_seconds =
     let headers = make_header token in
     IO.post_json
       ~json:
