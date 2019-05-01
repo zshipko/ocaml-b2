@@ -11,7 +11,8 @@ depends: [
     "dune" {build & >= "1.0"}
     "cohttp-lwt" {>= "1.0"}
     "ezjsonm" {>= "0.5"}
-    "nocrypto" {>= "0.5"}
+    "digestif" {>= "0.7"}
+    "base64"
 ]
 
 build: [[
