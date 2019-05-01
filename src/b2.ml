@@ -20,13 +20,13 @@ module IO (C : Cohttp_lwt.S.Client) = struct
     C.post ?ctx ~headers ~body (Uri.of_string url) >>= fun (_res, body) ->
     Cohttp_lwt.Body.to_string body
 
-  let post_form ?ctx ?(params = []) headers url =
+  (*let post_form ?ctx ?(params = []) headers url =
     let len = Uri.encoded_of_query params |> String.length in
     let headers =
       Cohttp.Header.replace headers "Content-Length" (string_of_int len)
     in
     C.post_form ?ctx ~headers ~params (Uri.of_string url)
-    >>= fun (_res, body) -> Cohttp_lwt.Body.to_string body
+    >>= fun (_res, body) -> Cohttp_lwt.Body.to_string body*)
 
   let post_json ?ctx ?json headers url =
     let body, _len =
@@ -40,8 +40,8 @@ module IO (C : Cohttp_lwt.S.Client) = struct
 
   let get_json ?ctx headers url = get ?ctx headers url >|= Ezjsonm.from_string
 
-  let post_form_json ?ctx ~params headers url =
-    post_form ?ctx ~params headers url >|= Ezjsonm.from_string
+  (*let post_form_json ?ctx ~params headers url =
+    post_form ?ctx ~params headers url >|= Ezjsonm.from_string*)
 end
 
 let find_default fn j name d = try fn j name with _ -> d
@@ -231,7 +231,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
                 authorization_token = find_string j [ "authorizationToken" ]
               } )
 
-  let download_file_by_id ?token ?(url = "") ?(range = "") ~file_id :
+  let download_file_by_id ?token ?(url = "") ?(range = "") ~file_id () :
       string Lwt.t =
     let headers, url =
       match token with
@@ -241,8 +241,8 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     in
     IO.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ file_id))
 
-  let download_file_by_name ?token ?auth ?(url = "") ?(range = "") ~file_name :
-      string Lwt.t =
+  let download_file_by_name ?token ?auth ?(url = "") ?(range = "") ~file_name
+      () : string Lwt.t =
     let headers, url =
       match token with
       | Some tok -> (make_header tok, tok.Token.download_url)
@@ -300,7 +300,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     >|= handle_error find_all_file_info
 
   let list_file_names ~token ?(start_file_name = "") ?(max_file_count = 0)
-      ?(prefix = "") ?delimiter ~bucket_id =
+      ?(prefix = "") ?delimiter ~bucket_id () =
     let headers = make_header token in
     IO.post_json
       ~json:
@@ -323,7 +323,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
         )
 
   let list_file_versions ~token ?(start_file_name = "") ?(start_file_id = "")
-      ?(max_file_count = 0) ?(prefix = "") ?delimiter ~bucket_id =
+      ?(max_file_count = 0) ?(prefix = "") ?delimiter ~bucket_id () =
     let headers = make_header token in
     IO.post_json
       ~json:
@@ -352,7 +352,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
   let hash_string s = Digestif.SHA1.digest_string s |> Digestif.SHA1.to_hex
 
   let upload_file ~(url : Upload_url.t) ?(content_type = "b2/x-auto")
-      ?(file_info = []) ~(data : char Lwt_stream.t) ~file_name =
+      ?(file_info = []) ~(data : char Lwt_stream.t) ~file_name () =
     Lwt_stream.to_string data >>= fun data ->
     let headers =
       ref
@@ -394,7 +394,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
               } )
 
   let start_large_file ~token ?(content_type = "b2/x-auto") ?(file_info = [])
-      ~bucket_id ~file_name =
+      ~bucket_id ~file_name () =
     let headers = make_header token in
     IO.post_json
       ~json:
@@ -472,7 +472,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
         revision = revision j
       }
 
-  let create_bucket ~token ?bucket_info ~bucket_name ~bucket_type =
+  let create_bucket ~token ?bucket_info ~bucket_name ~bucket_type () =
     let headers = make_header token in
     let info =
       match bucket_info with
@@ -537,7 +537,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
             Ezjsonm.find j [ "buckets" ] |> Ezjsonm.get_list find_all_bucket )
 
   let update_bucket ~token ?bucket_type ?bucket_info ?if_revision_is ~bucket_id
-      ~bucket_name =
+      ~bucket_name () =
     let headers = make_header token in
     let params =
       ref
