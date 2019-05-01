@@ -17,3 +17,5 @@ depends: [
 build: [[
     "dune" "build" "-p" name "-j" jobs
 ]]
+
+synopsis: "Backblaze B2 bindings for OCaml"
