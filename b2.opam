@@ -8,12 +8,12 @@ dev-repo: "https://github.com/zshipko/ocaml-b2.git"
 doc: "https://zshipko.github.io/ocaml-b2/doc"
 
 depends: [
-    "jbuilder" {build}
+    "dune" {build & >= "1.0"}
     "cohttp-lwt" {>= "1.0"}
     "ezjsonm" {>= "0.5"}
     "nocrypto" {>= "0.5"}
 ]
 
 build: [[
-    "jbuilder" "build"
+    "dune" "build" "-p" name "-j" jobs
 ]]
