@@ -2,21 +2,16 @@
 
 `ocaml-b2` provides OCaml bindings to the Backblaze B2 API.
 
-## Dependencies
-
-    - cohttp-lwt
-    - ezjsonm
-    - nocrypto
-
 ## Installation
 
     opam pin add b2 https://github.com/zshipko/ocaml-b2.git
 
 ## API
 
-All  methods for version 1 of the B2 API can be found in the module `B2.V1`
+All  methods for version 1 of the B2 API can be found in the module `B2.V1`. The
+OCaml API tries to mirror the [Backblaze documentation](https://www.backblaze.com/b2/docs/) as closely as possible.
 
-See b2.mli for OCaml type signatures
+See `b2.mli` for further details.
 
 ## Usage
 
@@ -32,7 +27,7 @@ let main =
     (* List bucket *)
     >>= fun token -> API.list_buckets token
     >>= Lwt_list.iter (fun bucket ->
-        Lwt_io.printl bucket.bucketName)
+        Lwt_io.printl bucket.bucket_name)
 
 let _ = Lwt_main.run main
 ```
