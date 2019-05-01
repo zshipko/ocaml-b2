@@ -110,7 +110,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     type t = {
       file_id : string;
       file_name : string;
-      content_sha1 : Cstruct.t;
+      content_sha1 : string;
       content_length : int64;
       content_type : string;
       file_info : Ezjsonm.value;
@@ -140,7 +140,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
       file_id : string;
       part_number : int;
       content_length : int64;
-      content_sha1 : Cstruct.t
+      content_sha1 : string
     }
   end
 
@@ -239,7 +239,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
   val finish_large_file :
     token:Token.t ->
     file_id:string ->
-    part_sha1_array:Cstruct.t list ->
+    part_sha1_array:string list ->
     File_info.t Lwt.t
 
   val upload_part :

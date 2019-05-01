@@ -48,8 +48,6 @@ let find_default fn j name d = try fn j name with _ -> d
 
 let find_string j name = Ezjsonm.find j name |> Ezjsonm.get_string
 
-let find_cstruct j name = find_string j name |> Cstruct.of_string
-
 let find_int j name = Ezjsonm.find j name |> Ezjsonm.get_int64
 
 let bucket_id j = find_string j [ "bucketId" ]
@@ -124,7 +122,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     type t = {
       file_id : string;
       file_name : string;
-      content_sha1 : Cstruct.t;
+      content_sha1 : string;
       content_length : int64;
       content_type : string;
       file_info : Ezjsonm.value;
@@ -154,19 +152,19 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
       file_id : string;
       part_number : int;
       content_length : int64;
-      content_sha1 : Cstruct.t
+      content_sha1 : string
     }
   end
 
   type bucket_type = [ `Public | `Private ]
 
   let string_of_bucket_type = function
-    | `Public -> "all_public"
-    | `Private -> "all_private"
+    | `Public -> "allPublic"
+    | `Private -> "allPrivate"
 
   (* Defaults to private when the string is invalid *)
   let bucket_type_of_string = function
-    | "all_public" -> `Public
+    | "allPublic" | "ALLPUBLIC" | "public" | "PUBLIC" -> `Public
     | _ -> `Private
 
   module Bucket = struct
@@ -195,11 +193,11 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     >|= handle_error (fun j ->
             Token.
               { account_id;
-                authorization_token = find_string j [ "authorization_token" ];
-                api_url = find_string j [ "api_url" ];
-                download_url = find_string j [ "download_url" ];
+                authorization_token = find_string j [ "authorizationToken" ];
+                api_url = find_string j [ "apiUrl" ];
+                download_url = find_string j [ "downloadUrl" ];
                 minimum_part_size =
-                  find_int j [ "minimum_part_size" ] |> Int64.to_int
+                  find_int j [ "minimumPartSize" ] |> Int64.to_int
               } )
 
   (* Files *)
@@ -208,7 +206,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     let headers = make_header token in
     IO.post_json
       ~json:
-        (`O [ ("file_name", `String file_name); ("file_id", `String file_id) ])
+        (`O [ ("fileName", `String file_name); ("fileId", `String file_id) ])
       headers
       (mk_endpoint token.Token.api_url "delete_file_version")
     >|= handle_error (fun _j -> File_version.{ file_id; file_name })
@@ -219,9 +217,9 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          [ ("bucket_id", `String bucket_id);
-            ("file_name_prefix", `String file_name_prefix);
-            ( "valid_duration_in_seconds",
+          [ ("bucketId", `String bucket_id);
+            ("fileNamePrefix", `String file_name_prefix);
+            ( "validDurationInSeconds",
               `String (string_of_int valid_duration_in_seconds) )
           ])
       headers
@@ -229,8 +227,8 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     >|= handle_error (fun j ->
             Download_authorization.
               { bucket_id;
-                file_name_prefix = find_string j [ "file_name_prefix" ];
-                authorization_token = find_string j [ "authorization_token" ]
+                file_name_prefix = find_string j [ "fileNamePrefix" ];
+                authorization_token = find_string j [ "authorizationToken" ]
               } )
 
   let download_file_by_id ?token ?(url = "") ?(range = "") ~file_id :
@@ -241,7 +239,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
           (make_header ~fields:[ ("Range", range) ] tok, tok.Token.download_url)
       | None -> (Cohttp.Header.init (), url)
     in
-    IO.get headers (mk_endpoint url ("download_file_by_id?file_id=" ^ file_id))
+    IO.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ file_id))
 
   let download_file_by_name ?token ?auth ?(url = "") ?(range = "") ~file_name :
       string Lwt.t =
@@ -265,12 +263,12 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     File_info.
       { file_id = file_id j;
         file_name = file_name j;
-        content_sha1 = find_cstruct j [ "content_sha1" ];
-        content_length = find_default find_int j [ "content_length" ] 0L;
-        content_type = find_string j [ "content_type" ];
-        file_info = find_default Ezjsonm.find j [ "file_info" ] `Null;
+        content_sha1 = find_string j [ "contentSha1" ];
+        content_length = find_default find_int j [ "contentLength" ] 0L;
+        content_type = find_string j [ "contentType" ];
+        file_info = find_default Ezjsonm.find j [ "fileInfo" ] `Null;
         action = find_string j [ "action" ];
-        upload_timestamp = find_int j [ "upload_timestamp" ]
+        upload_timestamp = find_int j [ "uploadTimestamp" ]
       }
 
   let find_all_partial_file_info j =
@@ -279,14 +277,14 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
         file_name = file_name j;
         account_id = account_id j;
         bucket_id = bucket_id j;
-        content_type = find_string j [ "content_type" ];
-        file_info = find_default Ezjsonm.find j [ "file_info" ] `Null;
-        upload_timestamp = find_int j [ "upload_timestamp" ]
+        content_type = find_string j [ "contentType" ];
+        file_info = find_default Ezjsonm.find j [ "fileInfo" ] `Null;
+        upload_timestamp = find_int j [ "uploadTimestamp" ]
       }
 
   let get_file_info ~token ~file_id =
     IO.post_json
-      ~json:(`O [ ("file_id", `String file_id) ])
+      ~json:(`O [ ("fileId", `String file_id) ])
       (make_header token)
       (mk_endpoint token.Token.api_url "get_file_info")
     >|= handle_error find_all_file_info
@@ -296,7 +294,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          [ ("bucket_id", `String bucket_id); ("file_name", `String file_name) ])
+          [ ("bucketId", `String bucket_id); ("fileName", `String file_name) ])
       headers
       (mk_endpoint token.Token.api_url "hide_file")
     >|= handle_error find_all_file_info
@@ -307,21 +305,21 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          ( [ ("bucket_id", `String bucket_id);
-              ("max_file_count", `Float (float_of_int max_file_count));
+          ( [ ("bucketId", `String bucket_id);
+              ("maxFileCount", `Float (float_of_int max_file_count));
               ("prefix", `String prefix);
               ( "delimiter",
                 match delimiter with Some d -> `String d | None -> `Null )
             ]
           @
           if start_file_name <> "" then
-            [ ("start_file_name", `String start_file_name) ]
+            [ ("startFileName", `String start_file_name) ]
           else [] ))
       headers
       (mk_endpoint token.Token.api_url "list_file_names")
     >|= handle_error (fun j ->
             Ezjsonm.find j [ "files" ] |> Ezjsonm.get_list find_all_file_info
-            |> fun l -> (l, find_default find_string j [ "next_file_name" ] "")
+            |> fun l -> (l, find_default find_string j [ "nextFileName" ] "")
         )
 
   let list_file_versions ~token ?(start_file_name = "") ?(start_file_id = "")
@@ -330,16 +328,16 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          ( [ ("bucket_id", `String bucket_id);
-              ("max_file_count", `Float (float_of_int max_file_count));
+          ( [ ("bucketId", `String bucket_id);
+              ("maxFileCount", `Float (float_of_int max_file_count));
               ("prefix", `String prefix);
               ( "delimiter",
                 match delimiter with Some d -> `String d | None -> `Null )
             ]
           @
           if start_file_name <> "" && start_file_id <> "" then
-            [ ("start_file_name", `String start_file_name);
-              ("start_file_id", `String start_file_id)
+            [ ("startFileName", `String start_file_name);
+              ("startFileId", `String start_file_id)
             ]
           else [] ))
       headers
@@ -348,8 +346,8 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
             Ezjsonm.find j [ "files" ] |> Ezjsonm.get_list find_all_file_info
             |> fun l ->
             ( l,
-              find_default find_string j [ "next_file_name" ] "",
-              find_default find_string j [ "next_file_id" ] "" ) )
+              find_default find_string j [ "nextFileName" ] "",
+              find_default find_string j [ "nextFileId" ] "" ) )
 
   let hash_string s = Digestif.SHA1.digest_string s |> Digestif.SHA1.to_hex
 
@@ -384,7 +382,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
   let cancel_large_file ~token ~(file_id : string) =
     let headers = make_header token in
     IO.post_json
-      ~json:(`O [ ("file_id", `String file_id) ])
+      ~json:(`O [ ("fileId", `String file_id) ])
       headers
       (mk_endpoint token.Token.api_url "cancel_large_file")
     >|= handle_error (fun j ->
@@ -401,10 +399,10 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          [ ("bucket_id", `String bucket_id);
-            ("content_type", `String content_type);
-            ("file_info", `O file_info);
-            ("file_name", `String file_name)
+          [ ("bucketId", `String bucket_id);
+            ("contentType", `String content_type);
+            ("fileInfo", `O file_info);
+            ("fileName", `String file_name)
           ])
       headers
       (mk_endpoint token.Token.api_url "start_large_file")
@@ -415,12 +413,9 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          [ ("file_id", `String file_id);
-            ( "part_sha1_array",
-              `A
-                (List.map
-                   (fun s -> `String (Cstruct.to_string s))
-                   part_sha1_array) )
+          [ ("fileId", `String file_id);
+            ( "partSha1Array",
+              `A (List.map (fun s -> `String s) part_sha1_array) )
           ])
       headers
       (mk_endpoint token.Token.api_url "finish_large_file")
@@ -442,17 +437,16 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     >|= handle_error (fun j ->
             Part.
               { file_id = file_id j;
-                part_number = find_int j [ "part_number" ] |> Int64.to_int;
-                content_length = find_int j [ "content_length" ];
-                content_sha1 = find_cstruct j [ "content_sha1" ]
+                part_number = find_int j [ "partNumber" ] |> Int64.to_int;
+                content_length = find_int j [ "contentLength" ];
+                content_sha1 = find_string j [ "contentSha1" ]
               } )
 
   let list_parts ~token ~file_id =
     let headers = make_header token in
     IO.post_json
       ~json:
-        (`O
-          [ ("file_id", `String file_id); ("max_part_count", `String "1000") ])
+        (`O [ ("fileId", `String file_id); ("maxPartCount", `String "1000") ])
       headers
       (mk_endpoint token.Token.api_url "list_parts")
     >|= handle_error (fun j ->
@@ -461,9 +455,9 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
                    Part.
                      { file_id;
                        part_number =
-                         find_int j [ "part_number" ] |> Int64.to_int;
-                       content_length = find_int j [ "content_length" ];
-                       content_sha1 = find_cstruct j [ "content_sha1" ]
+                         find_int j [ "partNumber" ] |> Int64.to_int;
+                       content_length = find_int j [ "contentLength" ];
+                       content_sha1 = find_string j [ "contentSha1" ]
                      } ) )
 
   (* Buckets *)
@@ -482,15 +476,15 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     let headers = make_header token in
     let info =
       match bucket_info with
-      | Some jv -> [ ("bucket_info", `O jv) ]
+      | Some jv -> [ ("bucketInfo", `O jv) ]
       | None -> []
     in
     IO.post_json
       ~json:
         (`O
-          ( [ ("bucket_name", `String bucket_name);
-              ("bucket_type", `String (string_of_bucket_type bucket_type));
-              ("account_id", `String token.Token.account_id)
+          ( [ ("bucketName", `String bucket_name);
+              ("bucketType", `String (string_of_bucket_type bucket_type));
+              ("accountId", `String token.Token.account_id)
             ]
           @ info ))
       headers
@@ -502,8 +496,8 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     IO.post_json
       ~json:
         (`O
-          [ ("bucket_id", `String bucket_id);
-            ("account_id", `String token.Token.account_id)
+          [ ("bucketId", `String bucket_id);
+            ("accountId", `String token.Token.account_id)
           ])
       headers
       (mk_endpoint token.Token.api_url "delete_bucket")
@@ -512,31 +506,31 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
   let get_upload_url ~token ~bucket_id =
     let headers = make_header token in
     IO.post_json
-      ~json:(`O [ ("bucket_id", `String bucket_id) ])
+      ~json:(`O [ ("bucketId", `String bucket_id) ])
       headers
       (mk_endpoint token.Token.api_url "get_upload_url")
     >|= handle_error (fun j ->
             Upload_url.
-              { upload_url = find_string j [ "upload_url" ];
-                authorization_token = find_string j [ "authorization_token" ]
+              { upload_url = find_string j [ "uploadUrl" ];
+                authorization_token = find_string j [ "authorizationToken" ]
               } )
 
   let get_upload_part_url ~token ~file_id =
     let headers = make_header token in
     IO.post_json
-      ~json:(`O [ ("file_id", `String file_id) ])
+      ~json:(`O [ ("fileId", `String file_id) ])
       headers
       (mk_endpoint token.Token.api_url "get_upload_part_url")
     >|= handle_error (fun j ->
             Upload_url.
-              { upload_url = find_string j [ "upload_url" ];
-                authorization_token = find_string j [ "authorization_token" ]
+              { upload_url = find_string j [ "uploadUrl" ];
+                authorization_token = find_string j [ "authorizationToken" ]
               } )
 
   let list_buckets ~token =
     let headers = make_header token in
     IO.post_json
-      ~json:(`O [ ("account_id", `String token.Token.account_id) ])
+      ~json:(`O [ ("accountId", `String token.Token.account_id) ])
       headers
       (mk_endpoint token.Token.api_url "list_buckets")
     >|= handle_error (fun j ->
@@ -547,27 +541,27 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     let headers = make_header token in
     let params =
       ref
-        [ ("account_id", `String token.Token.account_id);
-          ("bucket_id", `String bucket_id);
-          ("bucket_name", `String bucket_name)
+        [ ("accountId", `String token.Token.account_id);
+          ("bucketId", `String bucket_id);
+          ("bucketName", `String bucket_name)
         ]
     in
     let _ =
       match bucket_type with
       | Some p ->
           params :=
-            ("bucket_type", `String (string_of_bucket_type p)) :: !params
+            ("bucketType", `String (string_of_bucket_type p)) :: !params
       | None -> ()
     in
     let _ =
       match bucket_info with
-      | Some p -> params := ("bucket_info", `O p) :: !params
+      | Some p -> params := ("bucketInfo", `O p) :: !params
       | None -> ()
     in
     let _ =
       match if_revision_is with
       | Some p ->
-          params := ("bucket_name", `Float (Int64.to_float p)) :: !params
+          params := ("bucketName", `Float (Int64.to_float p)) :: !params
       | None -> ()
     in
     IO.post_json ~json:(`O !params) headers
