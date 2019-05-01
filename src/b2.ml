@@ -236,7 +236,7 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     let headers, url =
       match token with
       | Some tok ->
-          (make_header ~fields:[ ("Range", range) ] tok, tok.Token.download_url)
+          (make_header ~fields:[ ("range", range) ] tok, tok.Token.download_url)
       | None -> (Cohttp.Header.init (), url)
     in
     IO.get headers (mk_endpoint url ("download_file_by_id?fileId=" ^ file_id))
