@@ -192,10 +192,6 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     file_name:string ->
     string Lwt.t
 
-  val find_all_file_info : Ezjsonm.value -> File_info.t
-
-  val find_all_partial_file_info : Ezjsonm.value -> Partial_file_info.t
-
   val get_file_info : token:Token.t -> file_id:string -> File_info.t Lwt.t
 
   val hide_file :
@@ -250,8 +246,6 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
     url:Upload_url.t -> data:char Lwt_stream.t -> part_num:int -> Part.t Lwt.t
 
   val list_parts : token:Token.t -> file_id:string -> Part.t list Lwt.t
-
-  val find_all_bucket : Ezjsonm.value -> Bucket.t
 
   val create_bucket :
     token:Token.t ->
