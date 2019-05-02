@@ -22,10 +22,10 @@ module API = B2.V1(Cohttp_lwt_unix.Client)
 
 let main =
     (* Get a token *)
-    API.authorize_account accountId applicationKey
+    API.authorize_account ~account_id ~application_key >>= fun token ->
 
-    (* List bucket *)
-    >>= fun token -> API.list_buckets token
+    (* Print existing bucket names *)
+    API.list_buckets ~token
     >>= Lwt_list.iter (fun bucket ->
         Lwt_io.printl bucket.bucket_name)
 
