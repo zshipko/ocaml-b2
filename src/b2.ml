@@ -89,8 +89,9 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
 
   module Token = struct
     type t = {
-      account_id : string;
+      key_id : string;
       authorization_token : string;
+      account_id : string;
       api_url : string;
       download_url : string;
       minimum_part_size : int
@@ -184,15 +185,16 @@ module V1 (C : Cohttp_lwt.S.Client) = struct
     Cohttp.Header.of_list
       ([ ("Authorization", token.Token.authorization_token) ] @ fields)
 
-  let authorize_account ~account_id ~application_key =
-    let encoded = Base64.encode_string (account_id ^ ":" ^ application_key) in
+  let authorize_account ~key_id ~application_key =
+    let encoded = Base64.encode_string (key_id ^ ":" ^ application_key) in
     let headers =
       Cohttp.Header.of_list [ ("Authorization", "Basic " ^ encoded) ]
     in
     IO.get_json headers (mk_endpoint auth_endpoint "authorize_account")
     >|= handle_error (fun j ->
             Token.
-              { account_id;
+              { key_id;
+                account_id = account_id j;
                 authorization_token = find_string j [ "authorizationToken" ];
                 api_url = find_string j [ "apiUrl" ];
                 download_url = find_string j [ "downloadUrl" ];

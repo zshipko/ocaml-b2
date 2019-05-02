@@ -7,8 +7,9 @@ exception API_error
 module V1 (C : Cohttp_lwt.S.Client) : sig
   module Token : sig
     type t = {
-      account_id : string;
+      key_id : string;
       authorization_token : string;
+      account_id : string;
       api_url : string;
       download_url : string;
       minimum_part_size : int
@@ -92,7 +93,7 @@ module V1 (C : Cohttp_lwt.S.Client) : sig
   end
 
   val authorize_account :
-    account_id:string -> application_key:string -> Token.t Lwt.t
+    key_id:string -> application_key:string -> Token.t Lwt.t
 
   val delete_file_version :
     token:Token.t -> file_name:string -> file_id:string -> File_version.t Lwt.t
